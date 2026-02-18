@@ -159,14 +159,20 @@ def send_files_to_claude(api, chat_id, session, files):
     paths = [f[0] for f in files]
     captions = [f[1] for f in files if f[1]]
 
-    if len(paths) == 1:
-        prompt = f"The user sent a file from Telegram. View it at: {paths[0]}"
-    else:
-        file_list = " and ".join(paths)
-        prompt = f"The user sent {len(paths)} files from Telegram. View them at: {file_list}"
-
     if captions:
-        prompt += f" — Their message: {' | '.join(captions)}"
+        # Caption is the primary message; files are context
+        caption_text = " | ".join(captions)
+        if len(paths) == 1:
+            prompt = f"{caption_text}\n\n(Image attached from Telegram, saved at: {paths[0]})"
+        else:
+            file_list = " and ".join(paths)
+            prompt = f"{caption_text}\n\n({len(paths)} files attached from Telegram, saved at: {file_list})"
+    else:
+        if len(paths) == 1:
+            prompt = f"The user sent a file from Telegram. View it at: {paths[0]}"
+        else:
+            file_list = " and ".join(paths)
+            prompt = f"The user sent {len(paths)} files from Telegram. View them at: {file_list}"
 
     # Wait for Claude's input prompt before injecting
     if not wait_for_input(session, timeout=30):
@@ -211,12 +217,18 @@ ANSI_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\x1b[()][0-9A-B]")
 PROMPT_DETECT_RE = re.compile(
     r"(Enter to select.*to navigate.*Esc to cancel"
     r"|Enter to confirm.*Esc to cancel"
-    r"|Esc to cancel.*Tab to amend)",
+    r"|Esc to cancel.*Tab to amend"
+    r"|Do you want to allow)",
     re.IGNORECASE,
 )
 
-# Chrome lines to filter out of the displayed message
-SELECTOR_RE = PROMPT_DETECT_RE
+# Chrome lines to filter out of the displayed message (UI navigation hints only)
+SELECTOR_RE = re.compile(
+    r"(Enter to select.*to navigate.*Esc to cancel"
+    r"|Enter to confirm.*Esc to cancel"
+    r"|Esc to cancel.*Tab to amend)",
+    re.IGNORECASE,
+)
 
 # Pattern to extract numbered options like "❯ 1. Yes" or "  2. No"
 OPTION_RE = re.compile(r"^[\s❯>]*(\d+)\.\s+(.+)$")
@@ -526,7 +538,8 @@ def main(daemon=False):
                     api.send_message(chat_id, f"\u274c File error: {e}", parse_mode=None)
                 continue
 
-            text = msg.get("text", "")
+            # text is in "text" for regular messages, "caption" for media
+            text = msg.get("text", "") or msg.get("caption", "")
             if not text:
                 continue
 

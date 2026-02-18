@@ -245,6 +245,10 @@ systemctl --user enable couchclaude
 systemctl --user start couchclaude
 ```
 
+## TODO
+
+- [ ] **Multi-session support via Telegram Topics** — Map each Claude Code session to a Telegram forum topic. Allow running multiple concurrent sessions (e.g., different projects) with separate conversation threads in Telegram. Commands like `/new <name>` to create a session+topic, routing messages by topic to the correct tmux session. Inspired by [kidandcat/ccc](https://github.com/kidandcat/ccc).
+
 ## Testing Checklist
 
 - [ ] `couchclaude setup` creates valid config and hooks

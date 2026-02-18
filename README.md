@@ -180,6 +180,7 @@ Foreground (`couchclaude start`) logs to stdout. Daemon (`couchclaude daemon`) l
 - systemd service support for background operation
 
 **Planned:**
+- Multi-session support via Telegram Topics — run multiple Claude sessions, each in its own forum topic thread
 - macOS compatibility (launchd instead of systemd, brew install flow)
 - `/history` command — show recent exchanges without raw terminal output
 - Notification filtering — skip trivial responses to reduce noise
