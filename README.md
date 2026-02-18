@@ -4,13 +4,9 @@ Monitor and interact with Claude Code sessions from your phone via Telegram. No 
 
 ## How It Works
 
-```mermaid
-flowchart LR
-    CC["Claude Code\n(in tmux)"] -- "Hooks\n(Stop / SubagentStop)" --> CCTR["couchclaude\nnotify.py · poll.py"]
-    CCTR -- "tmux send-keys" --> CC
-    CCTR -- "Telegram Bot API\n(polling only)" --> TG["Telegram\n(phone)"]
-    TG -- "User replies" --> CCTR
-```
+<p align="center">
+  <img src="img/architecture.svg" alt="couchclaude architecture" width="680">
+</p>
 
 When Claude finishes a task or asks a question, a hook sends the output to Telegram. You reply from your phone and the message gets injected into the tmux session. You can also send photos, files, commands, and answer permission prompts — all from Telegram.
 
@@ -19,7 +15,7 @@ When Claude finishes a task or asks a question, a hook sends the output to Teleg
 - **Claude Code** — installed and working ([docs](https://docs.anthropic.com/en/docs/claude-code))
 - **Python 3.8+** with `requests` — `pip install requests`
 - **tmux** — `sudo apt install tmux` (or your package manager)
-- **A Telegram bot** — create one via [@BotFather](https://t.me/BotFather) and save the token
+- **A Telegram bot** — create one via [@BotFather](https://t.me/BotFather) and save the token (see [Telegram setup guide](TELEGRAM_SETUP.md))
 
 ## Installation
 
@@ -182,6 +178,7 @@ Foreground (`couchclaude start`) logs to stdout. Daemon (`couchclaude daemon`) l
 - systemd service support for background operation
 
 **Planned:**
+- macOS compatibility (launchd instead of systemd, brew install flow)
 - `/history` command — show recent exchanges without raw terminal output
 - Notification filtering — skip trivial responses to reduce noise
 - Voice message transcription — send voice notes from Telegram
