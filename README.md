@@ -1,6 +1,7 @@
 # couchclaude — Claude Code Telegram Remote
 
 Monitor and interact with Claude Code sessions from your phone via Telegram. No webhooks, no exposed ports — just outbound polling.
+
 ![](./img/header.png)
 
 ## How It Works
