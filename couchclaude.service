@@ -1,0 +1,16 @@
+[Unit]
+Description=Claude Code Telegram Remote
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.couchclaude/poll.py --daemon
+WorkingDirectory=%h/.couchclaude
+Restart=always
+RestartSec=10
+Environment=PATH=%h/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONPATH=%h/.couchclaude
+# Needed for tmux to find the server socket
+Environment=TMUX_TMPDIR=/tmp/tmux-%U
+
+[Install]
+WantedBy=default.target

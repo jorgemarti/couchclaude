@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+"""couchclaude - Claude Code Telegram Remote.
+
+Usage: couchclaude <command>
+
+Commands:
+  setup       Interactive first-time setup
+  start       Start the polling daemon (foreground)
+  daemon      Start as background process (systemd)
+  stop        Stop the daemon
+  status      Show daemon and session status
+  notify      Send notification (used by hooks)
+  test        Send a test message to Telegram
+  view        Capture and display current tmux screen
+"""
+
+import os
+import signal
+import subprocess
+import sys
+
+# Ensure the couchclaude directory is on the path
+CCTR_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, CCTR_DIR)
+
+PIDFILE = os.path.join(CCTR_DIR, "couchclaude.pid")
+
+
+def cmd_setup():
+    from setup import setup
+    setup()
+
+
+def cmd_start():
+    from poll import main
+    main(daemon=False)
+
+
+def cmd_daemon():
+    """Start poll.py as a background process with file logging."""
+    pid = subprocess.Popen(
+        [sys.executable, os.path.join(CCTR_DIR, "poll.py"), "--daemon"],
+        start_new_session=True,
+    ).pid
+    with open(PIDFILE, "w") as f:
+        f.write(str(pid))
+    print(f"couchclaude daemon started (pid={pid})")
+    print(f"Log: {os.path.join(CCTR_DIR, 'couchclaude.log')}")
+
+
+def cmd_stop():
+    """Stop the background daemon."""
+    if not os.path.exists(PIDFILE):
+        print("No pidfile found. Daemon may not be running.")
+        return
+    with open(PIDFILE, "r") as f:
+        pid = int(f.read().strip())
+    try:
+        os.kill(pid, signal.SIGTERM)
+        print(f"Sent SIGTERM to pid {pid}")
+    except ProcessLookupError:
+        print(f"Process {pid} not found (already stopped?)")
+    try:
+        os.remove(PIDFILE)
+    except OSError:
+        pass
+
+
+def cmd_status():
+    from config import load_config, validate_config
+    from tmux_utils import get_session_info
+
+    config = load_config()
+    missing = validate_config(config)
+    if missing:
+        print(f"Config incomplete. Missing: {', '.join(missing)}")
+        print("Run: couchclaude setup")
+        return
+
+    session = config["tmux_session"]
+    info = get_session_info(session)
+
+    # Daemon status
+    daemon_running = False
+    if os.path.exists(PIDFILE):
+        with open(PIDFILE, "r") as f:
+            pid = int(f.read().strip())
+        try:
+            os.kill(pid, 0)
+            daemon_running = True
+        except (ProcessLookupError, PermissionError):
+            pass
+
+    print(f"Daemon: {'running' if daemon_running else 'stopped'}")
+    if info:
+        print(f"tmux session: {info['session']}")
+        print(f"CWD: {info['cwd']}")
+        print(f"Command: {info['command']}")
+    else:
+        print(f"tmux session '{session}': not found")
+
+
+def cmd_notify():
+    hook_type = sys.argv[2] if len(sys.argv) > 2 else "completed"
+    sys.argv = [sys.argv[0], hook_type]
+    from notify import main
+    main()
+
+
+def cmd_test():
+    from config import load_config, validate_config
+    from telegram_api import TelegramAPI
+
+    config = load_config()
+    missing = validate_config(config)
+    if missing:
+        print(f"Config incomplete. Missing: {', '.join(missing)}")
+        return
+
+    api = TelegramAPI(config["telegram_bot_token"])
+    try:
+        api.send_message(config["telegram_chat_id"], "\U0001f3d3 couchclaude test message")
+        print("Test message sent!")
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+def cmd_view():
+    from config import load_config
+    from tmux_utils import capture_pane
+
+    config = load_config()
+    try:
+        content = capture_pane(config["tmux_session"], lines=50)
+        print(content)
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__)
+        sys.exit(1)
+
+    commands = {
+        "setup": cmd_setup,
+        "start": cmd_start,
+        "daemon": cmd_daemon,
+        "stop": cmd_stop,
+        "status": cmd_status,
+        "notify": cmd_notify,
+        "test": cmd_test,
+        "view": cmd_view,
+    }
+
+    cmd = sys.argv[1]
+    if cmd in ("-h", "--help", "help"):
+        print(__doc__)
+        sys.exit(0)
+
+    if cmd not in commands:
+        print(f"Unknown command: {cmd}")
+        print(__doc__)
+        sys.exit(1)
+
+    commands[cmd]()
+
+
+if __name__ == "__main__":
+    main()

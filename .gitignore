@@ -1,0 +1,7 @@
+config.json
+couchclaude.log
+couchclaude.pid
+.last_snapshot
+downloads/
+__pycache__/
+*.pyc
